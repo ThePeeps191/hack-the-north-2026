@@ -1,0 +1,19 @@
+# core
+numpy
+opencv-python
+pydantic>=2
+pyyaml
+fastapi
+uvicorn[standard]
+websockets
+
+# vision
+torch
+torchvision
+ultralytics
+supervision
+open_clip_torch
+
+# dev
+pytest
+httpx
