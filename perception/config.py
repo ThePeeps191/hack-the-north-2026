@@ -87,9 +87,12 @@ def resolve_device() -> str:
     return "cpu"
 
 
-def use_half() -> bool:
-    """fp16 only on CUDA. MPS half produces NaNs and CPU half is slower than fp32."""
-    return resolve_device() == "cuda"
+def quantize() -> int | None:
+    """Precision for ultralytics predict: 16 is fp16, None is fp32.
+
+    fp16 only on CUDA. MPS half produces NaNs and CPU half is slower than fp32.
+    """
+    return 16 if resolve_device() == "cuda" else None
 
 
 def setup_logging() -> None:
