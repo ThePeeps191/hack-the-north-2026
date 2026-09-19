@@ -162,3 +162,10 @@ perception/
 - Log per-stage timings every 100 frames. Log every phase transition and every event.
 - Qinkai is vibe coding under time pressure. Keep modules small, avoid abstractions beyond the Detector protocol, and say plainly when something can only be verified on the 4070.
 - Don't add auth, persistence, Docker, or ROS.
+- Build tests for the most critical parts, since correctness is critical.
+
+## Stretch: Cutie for `locked`
+Only after baseline `locked` (ByteTrack + CLIP) fails the two-people-crossing test.
+Seed Cutie with the YOLOE-seg mask of the selected track; Cutie mask → bbox → TargetState.
+YOLOE stays on as a check (IoU > 0.3 with a same-class detection); mask empty 5 frames → LOST;
+re-seed via CLIP re-ID. Fresh processor per PreparedTask. Cap long-term memory. 4070 only.
