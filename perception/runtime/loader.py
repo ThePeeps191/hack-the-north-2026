@@ -53,6 +53,12 @@ class Accepted:
 
 
 @dataclass(frozen=True)
+class Cleared:
+    """DELETE /spec. Routed through the same queue so stopping the car is a
+    loop-thread decision like every other one."""
+
+
+@dataclass(frozen=True)
 class ModelLoading:
     job: Job
     model: str
@@ -78,7 +84,7 @@ class Failed:
     reason: str
 
 
-Outcome = Accepted | ModelLoading | ModelLoaded | Prepared | Failed
+Outcome = Accepted | Cleared | ModelLoading | ModelLoaded | Prepared | Failed
 
 
 class Loader:
@@ -108,6 +114,15 @@ class Loader:
             # this job before the loop has seen that it was accepted.
             self._out.put(Accepted(job))
             self._cv.notify()
+
+    def clear(self) -> None:
+        """Drop the current spec. Cancels anything pending on the way."""
+        with self._cv:
+            self._gen += 1
+            displaced, self._pending = self._pending, None
+            if displaced is not None:
+                self._out.put(Failed(displaced, "superseded"))
+            self._out.put(Cleared())
 
     # 2. Consuming results ----------------------------------------------
     def poll(self) -> list[Outcome]:

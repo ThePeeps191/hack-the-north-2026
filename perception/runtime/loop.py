@@ -27,7 +27,8 @@ from config import CFG
 from contracts import Phase, TargetState
 from runtime.capture import Capture
 from runtime.events import Bus
-from runtime.loader import Accepted, Failed, Loader, ModelLoaded, ModelLoading, Prepared
+from runtime.loader import (Accepted, Cleared, Failed, Loader, ModelLoaded,
+                            ModelLoading, Prepared)
 from runtime.state import Machine
 from runtime.task import PreparedTask
 from stages.select import candidates_for, pick
@@ -102,6 +103,10 @@ class InferenceLoop:
         for outcome in self.loader.poll():
             if isinstance(outcome, Accepted):
                 self.machine.on_spec(outcome.job.instruction_id, outcome.job.spec.spec_id)
+            elif isinstance(outcome, Cleared):
+                self.active = None
+                self._fault_source = None
+                self.machine.on_clear_spec()
             elif isinstance(outcome, ModelLoading):
                 self.machine.on_model_loading(outcome.model)
             elif isinstance(outcome, ModelLoaded):

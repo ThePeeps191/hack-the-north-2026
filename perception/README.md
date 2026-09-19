@@ -26,16 +26,26 @@ The controller drives only when `phase == "TRACKING"`.
 
 ## Run
 
+Run everything from inside `perception/`.
+
 ```bash
-pip install -r requirements.txt
+python -m venv .venv && .venv/bin/pip install -r requirements.txt
 
-# GPU host (RTX 4070)
-python scripts/build_engines.py          # once; builds TensorRT engines for fixed-vocab models
-VIDEO_SOURCE=http://<car-ip>/stream uvicorn perception.main:app --host 0.0.0.0 --port 8001
+# GPU host
+VIDEO_SOURCE=http://<car-ip>/stream .venv/bin/uvicorn main:app --host 0.0.0.0 --port 8001
 
-# Mac (logic testing only)
-PYTORCH_ENABLE_MPS_FALLBACK=1 IMGSZ=320 VIDEO_SOURCE=clips/pencil.mp4 \
-  uvicorn perception.main:app --port 8001
+# Mac (logic testing only; YOLOE runs on CPU here, see below)
+DEVICE=cpu IMGSZ=320 VIDEO_SOURCE=clips/demo.mp4 .venv/bin/uvicorn main:app --port 8001
+```
+
+Open `http://localhost:8001/` for a dev page with the feed, live target state and
+a box to post specs. The operator UI is Kevin's, in `frontend/`.
+
+```bash
+pytest                                   # 141 tests, no weights or GPU needed
+PERCEPTION_TEST_WEIGHTS=1 DEVICE=cpu IMGSZ=320 pytest tests/test_detectors_real.py
+python scripts/smoke_test.py             # whole pipeline against a generated clip
+python scripts/e2e_check.py              # drive a running service over HTTP + WS
 ```
 
 Try a spec:
@@ -49,4 +59,15 @@ curl -X POST localhost:8001/spec -H 'content-type: application/json' -d '{
 
 ## Config
 
-`VIDEO_SOURCE`, `DEVICE` (auto/cuda/mps/cpu), `IMGSZ`, `PORT`, `MODELS_CONFIG`, `ACQUIRE_TIMEOUT_S`, `CONF_THRESHOLD`. Models are listed in `models.yaml`. TensorRT `.engine` files are built on the GPU host and never committed.
+`VIDEO_SOURCE`, `DEVICE` (auto/cuda/mps/cpu), `IMGSZ`, `PORT`, `MODELS_CONFIG`, `ACQUIRE_TIMEOUT_S`, `CONF_THRESHOLD`, `LOG_LEVEL`. Models are listed in `models.yaml`. TensorRT `.engine` files are built on the GPU host and never committed.
+
+## Notes for the GPU host
+
+- Weights (~620 MB) download into `weights/` on first boot, including a 572 MB
+  MobileCLIP text encoder that YOLOE pulls silently. Do that once on good WiFi.
+- `ultralytics` and `supervision` are pinned. The predict signature changed
+  between versions; don't float them.
+- On a Mac, YOLOE is forced to CPU: its text encoder needs float64 and MPS has
+  none. CUDA is unaffected.
+- A model that can't run on the current machine reports `available: false` from
+  `GET /models` and the service still boots.

@@ -31,6 +31,7 @@ class FakeCapture:
         self.seq = 0
         self.ts = 0.0
         self.dead = False
+        self.opened = True
 
     def tick(self, now):
         if not self.dead:
